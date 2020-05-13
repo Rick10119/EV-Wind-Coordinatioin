@@ -5,3 +5,5 @@ Emission-concerned wind-electric vehicle (EV) coordination on the transmission g
 # modeling of thermal and wind power (margin) l2
 # min cost s.t. l1 & l2
 # => charging demand/strategy of EV
+
+# 系统的约束写好了，火电的处理和爬坡写好了
