@@ -1,33 +1,32 @@
-%% ²ÎÊıÉè¶¨
+%% å‚æ•°è®¾å®š
 clc; clear;
-TIME = 56;                                                                  %Ê±¶ÎÊıÁ¿
-NUMOFTHERMAL = 4;                                                           %ÈÈµç³§ÊıÁ¿
-a_f = [0.013 0.015 0.017 0.013];                                            %ÈÈµç³§³É±¾²ÎÊı $/MW2h
+TIME = 56;                                                                  %æ—¶æ®µæ•°é‡
+NUMOFTHERMAL = 4;                                                           %çƒ­ç”µå‚æ•°é‡
+a_f = [0.013 0.015 0.017 0.013];                                            %çƒ­ç”µå‚æˆæœ¬å‚æ•° $/MW2h
 b_f = [19.71 19.71 20.39 19.71];                                            % $/MWh
 c_f = [1675 1669 1650 1675];                                                % $/h
-PI_C = [0.03 0.03 0.02];                                                    %³äµç·ÑÓÃ£¨UC,UD,BD£©$/kWh
-PI_D = [0 0 0.04];                                                          %·Åµç·ÑÓÃ£¨UC,UD,BD£©$/kWh
-P_w_max = xlsread("¸½¼ş2-·çµç³öÁ¦_ÆÕÍ¨¸ººÉÔ¤²âÊı¾İ.xlsx","load_wind_data","C2:C57");    %·çµçÔ¤²âÖµ MW
-P_ld = xlsread("¸½¼ş2-·çµç³öÁ¦_ÆÕÍ¨¸ººÉÔ¤²âÊı¾İ.xlsx","load_wind_data","B2:B57");       %ÆÕÍ¨¸ººÉ   MW
-%¼ÇÂ¼Ô¼Êø½á¹û
+PI_C = [0.03 0.03 0.02];                                                    %å……ç”µè´¹ç”¨ï¼ˆUC,UD,BDï¼‰$/kWh
+PI_D = [0 0 0.04];                                                          %æ”¾ç”µè´¹ç”¨ï¼ˆUC,UD,BDï¼‰$/kWh
+Data_load;                                                                  %è°ƒç”¨ï¼Œè¯»å–æ•°æ®
+%é£ç”µé¢„æµ‹å€¼ MW   P_w_max
+%æ™®é€šè´Ÿè·   MW   P_ld
+
+%è®°å½•çº¦æŸç»“æœ
 P_u_result = [];
 P_w_result = [];
 P_C_result = [];
 P_D_result = [];
 
 
-%% Ô¼ÊøÌõ¼ş¼°ÓÅ»¯Ä¿±ê
-%×Ô±äÁ¿
-P_w = sdpvar(TIME,1,'full');                                                %·çµç³öÁ¦ MW
-P_u = sdpvar(TIME,NUMOFTHERMAL,'full');                                     %ÈÈµç³§³öÁ¦ MW
+%% çº¦æŸæ¡ä»¶åŠä¼˜åŒ–ç›®æ ‡
+%è‡ªå˜é‡
+P_w = sdpvar(TIME,1,'full');                                                %é£ç”µå‡ºåŠ› MW
+P_u = sdpvar(TIME,NUMOFTHERMAL,'full');                                     %çƒ­ç”µå‚å‡ºåŠ› MW
 P_z = binvar(TIME,1,'full');
-P_C = sdpvar(TIME,1,'full');                                                %EV³äµç¹¦ÂÊ MW
-P_D = sdpvar(TIME,1,'full');                                                %EV·Åµç¹¦ÂÊ MW
-R_u = zeros(TIME,1);                                                        %ÈÈµç³§³öÁ¦ÅÀÆÂ MW/min
-for k=2:TIME
-    R_u(k) = (P_u(k)-P_u(k-1))/15;
-end
-%EV¼¯ÈºÄ£ĞÍ OMEGA1  test
+P_C = sdpvar(TIME,1,'full');                                                %EVå……ç”µåŠŸç‡ MW
+P_D = sdpvar(TIME,1,'full');                                                %EVæ”¾ç”µåŠŸç‡ MW
+
+%EVé›†ç¾¤æ¨¡å‹ OMEGA1  test
 P_C_max = 10*ones(TIME,1);
 P_D_max = 10*ones(TIME,1);
 
@@ -35,27 +34,28 @@ P_D_max = 10*ones(TIME,1);
 mode = [0 0 1];
 for n=1:3
     Constraints = [];
+    % EVçº¦æŸ
     for k=1:TIME
         Constraints = [Constraints,0 <= P_C(k) <= P_C_max(k).*P_z(k)];
         Constraints = [Constraints,0 <= P_D(k) <= mode(n)*P_D_max(k).*(1-P_z(k))]; 
     end
 
-    %ÈÈµç³§Ä£ĞÍ OMEGA2
+    %çƒ­ç”µå‚æ¨¡å‹ OMEGA2 çº¦æŸï¼Œè°ƒç”¨
+    Thermal_constraints;
 
-
-    %ÏµÍ³Ô¼Êø
+    %ç³»ç»Ÿçº¦æŸ
     for k=1:TIME
-        Constraints = [Constraints,0 <= P_w(k) <= P_w_max(k)];              %·çµç³öÁ¦Ô¼Êø
-        Constraints = [Constraints,P_w(k)+sum(P_u(k,:))-P_ld(k)-P_C(k)+P_D(k) == 0];%¹¦ÂÊÆ½ºâ
+        Constraints = [Constraints,0 <= P_w(k) <= P_w_max(k)];              %é£ç”µå‡ºåŠ›çº¦æŸ
+        Constraints = [Constraints,P_w(k)+sum(P_u(k,:))-P_ld(k)-P_C(k)+P_D(k) == 0];%åŠŸç‡å¹³è¡¡
     end
 
-    %Ä¿±êº¯Êı
+    %ç›®æ ‡å‡½æ•°
     Z_u = 0;
     for k=1:TIME
-        Z_u = Z_u+P_u(k,:)*diag(a_f)*P_u(k,:)'+b_f*P_u(k,:)'+c_f;           %ÈÈµç³§³É±¾
+        Z_u = Z_u+P_u(k,:)*diag(a_f)*P_u(k,:)'+b_f*P_u(k,:)'+c_f;           %çƒ­ç”µå‚æˆæœ¬
     end
     Z_u = sum(Z_u);
-    Z_CD = PI_C(n)*sum(P_C)*1000/4 - PI_D(n)*sum(P_D)*1000/4;               %EV³ä·Åµç³É±¾
+    Z_CD = PI_C(n)*sum(P_C)*1000/4 - PI_D(n)*sum(P_D)*1000/4;               %EVå……æ”¾ç”µæˆæœ¬
     Z = Z_u+Z_CD;
     ops = sdpsettings('solver','cplex');
     optimize(Constraints,Z,ops)
