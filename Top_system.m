@@ -26,22 +26,19 @@ P_z = binvar(TIME,1,'full');
 P_C = sdpvar(TIME,1,'full');                                                %EV充电功率 MW
 P_D = sdpvar(TIME,1,'full');                                                %EV放电功率 MW
 
-%EV集群模型 OMEGA1  test
-P_C_max = 10*ones(TIME,1);
-P_D_max = 10*ones(TIME,1);
 
 
-mode = [0 0 1];
-for n=1:3
+%% mode: n = 1:3 表示无序充电、有序充电、有序充放电
+
+for n =1:3            %不同模式
     Constraints = [];
-    % EV约束
-    for k=1:TIME
-        Constraints = [Constraints,0 <= P_C(k) <= P_C_max(k).*P_z(k)];
-        Constraints = [Constraints,0 <= P_D(k) <= mode(n)*P_D_max(k).*(1-P_z(k))]; 
-    end
+    % EV约束, 调用
+    EV_Aggregator;
+    Constraints = [Constraints,constraints1];
 
     %热电厂模型 OMEGA2 约束，调用
     Thermal_constraints;
+    Constraints = [Constraints,Constraints2];
 
     %系统约束
     for k=1:TIME
