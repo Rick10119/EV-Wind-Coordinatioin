@@ -40,7 +40,7 @@ car_num = zeros(TIME, 1);
 for i = 1:TIME
     car_num(i) = sum(arrive_num(1:i)) - sum(leave_num(1:i));
 end
-% plot(car_num)
+% plot(car_num);
 
 %% charging
 % charging mode
@@ -69,22 +69,22 @@ S_A  = arrive_num .* 20 - leave_num .* 40;
 
 D_A = leave_num .* 40;
 %% EV variables
-% E_A = sdpvar(TIME, 1, 'full');     %(其实不是独立变量？？）
+E_A = sdpvar(TIME, 1, 'full');     
 % P_C = sdpvar(TIME, 1, 'full');
 % P_D = sdpvar(TIME, 1, 'full');   (already defined in Top_system)
-% (3)
-E_A(1) = S_A(1);  
-for i = 2:TIME
-    E_A(i) = E_A(i-1) + ...
-        (yita_C * P_C(i) - P_D(i) / yita_D) * delta_t + S_A(i);
-    % 向前后向后差分，可以讨论
-end
+
 
 
 
 %% EV constraints -- Omega_I
 constraints1 = [];
 
+% (3)
+constraints1 = [constraints1,E_A(1) == S_A(1)];
+for i = 2:TIME
+    constraints1 = [constraints1,E_A(i) == E_A(i-1) + ...
+        (yita_C * P_C(i) - P_D(i) / yita_D) * delta_t + S_A(i)];
+end
 
 
 % (1)(2)(4)(5)(6)
