@@ -1,0 +1,96 @@
+%% comments
+% variable[i][k] variable at the kth bus for the ith time period
+% Omega_I EV constraints set
+% P_C[i][k] charging power of an aggregator
+% P_C_min[i][k] charging power's lower limit
+% P_C_max[i][k] charging power's upper limit
+% P_D[i][k] discharging power of an aggregator 
+% P_D_min[i][k] discharging power's lower limit
+% P_D_max[i][k] discharging power's upper limit
+% E_A[i][k] charged energy of an aggregator 
+% E_A_min[i][k] charged energy's lower limit
+% E_A_max[i][k] charged energy's upper limit
+% yita_C EV charging efficiency
+% yita_D EV discharging efficiency
+% delta_t time step
+% S_A[i][k] step change in the stored energy due to EV's move
+% D_A[i][k] energy demands of an aggregator
+% arrive_num[i] number of cars arrived in the ith time period
+% leave_num[i] leave numbers
+% car_num[i] number of cars in the aggregator in the ith time period
+% mode[3] one-hot code of mode
+% max/min_charging/discharging_power: a single car's parameter
+
+%% EV constants
+% remaining number of e-cars
+arrive_time = EV_arrive_leave(:,1);
+leave_time = EV_arrive_leave(:,2);
+
+arrive_num = zeros(TIME, 1);
+for i = 1:TIME
+    arrive_num(i) = ratio*length(find(arrive_time == i));
+end
+
+leave_num = zeros(TIME, 1);
+for i = 1:TIME
+    leave_num(i) = ratio*length(find(leave_time == i));
+end
+    
+car_num = zeros(TIME, 1);
+for i = 1:TIME
+    car_num(i) = sum(arrive_num(1:i)) - sum(leave_num(1:i));
+end
+% plot(car_num);
+
+%% charging
+% charging mode
+% n 表示模式，已经在top中定义
+max_charging_power = 10/1000;
+max_discharging_power = 10/1000;
+min_charging_power = 0/1000;
+min_discharging_power = 0/1000;
+
+% charging power constraints
+P_C_min = car_num .* min_charging_power;
+P_C_max = car_num .* max_charging_power;
+P_D_min = car_num .* min_discharging_power;
+P_D_max = car_num .* max_discharging_power;
+
+delta_t = 0.25;  % 15min 0.25h
+
+% efficiency of dis-/charging
+yita_C = 0.85;
+yita_D = 0.85;
+% energy capacityP_C_result
+E_A_max = 40 .* car_num./1000;
+E_A_min = 8 .* car_num./1000;
+% stored energy of the aggregator
+S_A  = (arrive_num .* 20 - leave_num .* 40)./1000;
+
+D_A = leave_num .* 20./1000;
+%% EV variables
+E_A = sdpvar(TIME, 1, 'full');     
+
+%% EV constraints -- Omega_I
+constraints1 = [];
+
+% (3)
+constraints1 = [constraints1,E_A(1) == S_A(1)];
+for i = 2:TIME
+    constraints1 = [constraints1,E_A(i) == E_A(i-1) + ...
+        (yita_C * P_C(i) - P_D(i) / yita_D) * delta_t + S_A(i)];
+end
+
+% (1)(2)(4)(5)(6)
+for i=1:TIME
+        constraints1 = [constraints1,P_C_min(i)*P_z(i) <= P_C(i) <= P_C_max(i)*P_z(i)];
+        constraints1 = [constraints1,P_D_min(i)*(1-P_z(i)) <= P_D(i) <= P_D_max(i)*(1-P_z(i))];
+end
+  
+for i = 2:TIME
+    constraints1 = [constraints1, E_A_min(i) <= E_A(i) <= E_A_max(i)];
+end 
+    constraints1 = [constraints1, sum(yita_C .* P_C(1:TIME) - ...
+        P_D(1:TIME) ./ yita_D) * delta_t >= sum(D_A(1:TIME))];
+
+% Omega_I = constraints1;

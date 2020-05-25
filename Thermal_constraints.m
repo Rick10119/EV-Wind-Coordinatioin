@@ -4,7 +4,7 @@
 % % NUMOFTHERMAL = 4;
 
 %%
-%³öÁ¦Ô¼Êø(WM)
+%³öÁ¦Ô¼Êø(MW)
 P_u_min = [20, 20, 25, 25];
 P_u_max = [130, 130, 162, 162];
 %ÅÀÆÂÔ¼Êø(MW/min)*£¨min)
@@ -12,17 +12,24 @@ dt = 15;                                                                    %²½³
 R_u_dM = dt * [ -1.5, -3.0, -1.5, -1.8];
 R_u_uM = dt * [ 1.5, 3.0, 1.5, 1.8];
 %³öÁ¦£¨topÖÐÒÑ¾­¶¨Òå£©
-% P_u = sdpvar(TIME,NUMOFTHERMAL,'full');                                     %ÈÈµç³§³öÁ¦ MW
-% R_u = zeros(TIME,1);                                                        %ÈÈµç³§³öÁ¦ÅÀÆÂ MW/min
+% P_u = sdpvar(TIME,NUMOFTHERMAL,'full');                                   %ÈÈµç³§³öÁ¦ MW
+% R_u = zeros(TIME,1);                                                      %ÈÈµç³§³öÁ¦ÅÀÆÂ MW/min
 
 %ÅÀÆÂºÍ³öÁ¦µÄ¹ØÏµ
 R_u = P_u - [P_u(TIME,:); P_u(1:TIME-1,:)];
 
 %%
-
+Constraints2 = [];
+% ³öÁ¦Ô¼Êø
 for i = 1:NUMOFTHERMAL
-    for k=1:TIME
-        Constraints = [Constraints, P_u_min(i) <= P_u(k,i) <= P_u_max(i)];
-        Constraints = [Constraints, R_u_dM(i)  <= R_u(k,i) <= R_u_uM(i)];
+    for k = 1:TIME
+        Constraints2 = [Constraints2, P_u_min(i) <= P_u(k,i) <= P_u_max(i)];
+    end
+end
+
+% ÅÀÆÂÔ¼Êø
+for i = 1:NUMOFTHERMAL
+    for k = 2:TIME %´ÓµÚ¶þ¸öÊ±¿Ì¿ªÊ¼¼ÆËãÔ¼Êø£¬ÒòÎªÊ±¼ä²»ÊÇÊ×Î²ÏàÁ¬µÄ
+        Constraints2 = [Constraints2, R_u_dM(i)  <= R_u(k,i) <= R_u_uM(i)];
     end
 end
